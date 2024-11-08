@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'history_page.dart'; // Import HistoryPage
@@ -19,8 +20,11 @@ class _HomePageState extends State<HomePage> {
   Set<Polyline> _polylines = {};
   List<LatLng> _routeCoordinates = [];
   List<Map<String, dynamic>> routeHistory = [];
+  Set<Marker> _markers = {};
   bool _isTracking = false;
   int _polylineCounter = 0;
+  String _buttonText = 'Start';
+  Color _buttonColor = Colors.green;
 
   @override
   void initState() {
@@ -73,10 +77,61 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _addStartMarker(LatLng position, int routeIndex) {
+    setState(() {
+      _markers.add(
+        Marker(
+          markerId: MarkerId("start_$routeIndex"),
+          position: position,
+          infoWindow: InfoWindow(title: "Start of Route $routeIndex"),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        ),
+      );
+    });
+  }
+
+  void _addStopMarker(LatLng position, int routeIndex) {
+    setState(() {
+      _markers.add(
+        Marker(
+          markerId: MarkerId("stop_$routeIndex"),
+          position: position,
+          infoWindow: InfoWindow(title: "End of Route $routeIndex"),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
+    });
+  }
+
+  void _addRouteLabelMarker(LatLng position, int routeIndex) {
+    setState(() {
+      _markers.add(
+        Marker(
+          markerId: MarkerId("label_$routeIndex"),
+          position: position,
+          infoWindow: InfoWindow(title: "Route $routeIndex"),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        ),
+      );
+    });
+  }
+
   moveToPosition(LatLng latLng) async {
     GoogleMapController mapController = await _googleMapController.future;
     mapController.animateCamera(CameraUpdate.newCameraPosition(
         CameraPosition(target: latLng, zoom: 15)));
+  }
+
+  void showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: Colors.black,
+      textColor: Colors.white,
+      fontSize: 20.0,
+    );
   }
 
   @override
@@ -88,26 +143,6 @@ class _HomePageState extends State<HomePage> {
     return _getMap();
   }
 
-  Widget _getMarker() {
-    return Container(
-      width: 40,
-      height: 40,
-      padding: EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(100),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.grey,
-              offset: Offset(0, 3),
-              spreadRadius: 4,
-              blurRadius: 6)
-        ],
-      ),
-      child: ClipOval(child: Image.asset("assets/download.jpeg")),
-    );
-  }
-
   Widget _getMap() {
     return SafeArea(
       child: Stack(
@@ -116,9 +151,9 @@ class _HomePageState extends State<HomePage> {
             initialCameraPosition: _cameraPosition!,
             mapType: MapType.normal,
             polylines: _polylines,
+            markers: _markers, // Display markers on the map
             myLocationEnabled: true,
-            myLocationButtonEnabled:
-                false, // Disable default My Location button
+            myLocationButtonEnabled: false,
             onMapCreated: (GoogleMapController controller) {
               if (!_googleMapController.isCompleted) {
                 _googleMapController.complete(controller);
@@ -128,16 +163,30 @@ class _HomePageState extends State<HomePage> {
           Positioned.fill(
             child: Align(
               alignment: Alignment.center,
-              child: _getMarker(),
+              child: Container(
+                width: 40,
+                height: 40,
+                padding: EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(100),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.grey,
+                        offset: Offset(0, 3),
+                        spreadRadius: 4,
+                        blurRadius: 6)
+                  ],
+                ),
+                child: ClipOval(child: Image.asset("assets/download.jpeg")),
+              ),
             ),
           ),
-          // Custom My Location Button
           Positioned(
-            bottom: 100, // Adjust to position above the zoom controls
+            bottom: 100,
             right: 10,
             child: FloatingActionButton(
               onPressed: () async {
-                // Get the current location and move the camera
                 _currentLocation = await _location?.getLocation();
                 if (_currentLocation != null) {
                   LatLng currentLatLng = LatLng(
@@ -148,12 +197,11 @@ class _HomePageState extends State<HomePage> {
                 }
               },
               child: Icon(Icons.my_location),
-              mini: true, // Smaller size button
+              mini: true,
               backgroundColor: Colors.white,
               foregroundColor: Colors.blue,
             ),
           ),
-          // Start and Stop tracking buttons
           Positioned(
             bottom: 20,
             left: 20,
@@ -163,6 +211,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 ElevatedButton(
                   onPressed: () async {
+                    showToast("Tracking has started");
                     setState(() {
                       _isTracking = true;
                       _polylineCounter++;
@@ -170,12 +219,16 @@ class _HomePageState extends State<HomePage> {
                     });
                     _currentLocation = await _location?.getLocation();
                     if (_currentLocation != null) {
-                      LatLng currentLatLng = LatLng(
+                      LatLng startLatLng = LatLng(
                         _currentLocation!.latitude!,
                         _currentLocation!.longitude!,
                       );
-                      _routeCoordinates.add(currentLatLng);
-                      moveToPosition(currentLatLng);
+                      _routeCoordinates.add(startLatLng);
+                      _addStartMarker(startLatLng,
+                          _polylineCounter);
+                      _addRouteLabelMarker(startLatLng,
+                          _polylineCounter);
+                      moveToPosition(startLatLng);
                       _createPolylines();
                     }
                   },
@@ -187,30 +240,46 @@ class _HomePageState extends State<HomePage> {
                       () {
                         _isTracking = false;
                         if (_routeCoordinates.isNotEmpty) {
+                          LatLng stopLatLng = _routeCoordinates.last;
+                          _addStopMarker(stopLatLng,
+                              _polylineCounter);
                           routeHistory.add({
                             'coordinates': List<LatLng>.from(_routeCoordinates),
                           });
-                          _routeCoordinates =
-                              []; // Clear route after saving to history
+                          _routeCoordinates = [];
                         }
                       },
                     );
+                    showToast("Tracking is stopped");
                   },
                   child: Text('Stop'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => HistoryPage(routeHistory)),
-                    );
-                  },
-                  child: Text('History'),
                 ),
               ],
             ),
           ),
+          Positioned(
+            top: 20, // Aligns the button to the top
+            right: 20, // Aligns the button to the right
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => HistoryPage(routeHistory)),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue, // Button color
+                foregroundColor: Colors.white, // Text color
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: Text('History'),
+            ),
+          ),
+
         ],
       ),
     );

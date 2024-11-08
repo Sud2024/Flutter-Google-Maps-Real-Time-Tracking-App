@@ -38,6 +38,8 @@ dependencies:
   google_maps_flutter: ^2.2.1
   location: ^7.0.1
   http:
+  fluttertoast: ^8.2.8
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
