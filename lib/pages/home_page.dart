@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
-import 'history_page.dart'; // Import HistoryPage
+import 'history_page.dart'; // Import your existing HistoryPage
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,8 +23,6 @@ class _HomePageState extends State<HomePage> {
   Set<Marker> _markers = {};
   bool _isTracking = false;
   int _polylineCounter = 0;
-  String _buttonText = 'Start';
-  Color _buttonColor = Colors.green;
 
   @override
   void initState() {
@@ -104,19 +102,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _addRouteLabelMarker(LatLng position, int routeIndex) {
-    setState(() {
-      _markers.add(
-        Marker(
-          markerId: MarkerId("label_$routeIndex"),
-          position: position,
-          infoWindow: InfoWindow(title: "Route $routeIndex"),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        ),
-      );
-    });
-  }
-
   moveToPosition(LatLng latLng) async {
     GoogleMapController mapController = await _googleMapController.future;
     mapController.animateCamera(CameraUpdate.newCameraPosition(
@@ -136,7 +121,16 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return _buildBody();
+    return Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Route Tracker',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.black,
+          centerTitle: true,
+        ),
+        body: _buildBody());
   }
 
   Widget _buildBody() {
@@ -151,7 +145,7 @@ class _HomePageState extends State<HomePage> {
             initialCameraPosition: _cameraPosition!,
             mapType: MapType.normal,
             polylines: _polylines,
-            markers: _markers, // Display markers on the map
+            markers: _markers,
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             onMapCreated: (GoogleMapController controller) {
@@ -182,6 +176,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
+          // Location Button
           Positioned(
             bottom: 100,
             right: 10,
@@ -202,61 +197,7 @@ class _HomePageState extends State<HomePage> {
               foregroundColor: Colors.blue,
             ),
           ),
-          Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: () async {
-                    showToast("Tracking has started");
-                    setState(() {
-                      _isTracking = true;
-                      _polylineCounter++;
-                      _routeCoordinates = [];
-                    });
-                    _currentLocation = await _location?.getLocation();
-                    if (_currentLocation != null) {
-                      LatLng startLatLng = LatLng(
-                        _currentLocation!.latitude!,
-                        _currentLocation!.longitude!,
-                      );
-                      _routeCoordinates.add(startLatLng);
-                      _addStartMarker(startLatLng,
-                          _polylineCounter);
-                      _addRouteLabelMarker(startLatLng,
-                          _polylineCounter);
-                      moveToPosition(startLatLng);
-                      _createPolylines();
-                    }
-                  },
-                  child: Text('Start'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(
-                      () {
-                        _isTracking = false;
-                        if (_routeCoordinates.isNotEmpty) {
-                          LatLng stopLatLng = _routeCoordinates.last;
-                          _addStopMarker(stopLatLng,
-                              _polylineCounter);
-                          routeHistory.add({
-                            'coordinates': List<LatLng>.from(_routeCoordinates),
-                          });
-                          _routeCoordinates = [];
-                        }
-                      },
-                    );
-                    showToast("Tracking is stopped");
-                  },
-                  child: Text('Stop'),
-                ),
-              ],
-            ),
-          ),
+          // History Button
           Positioned(
             top: 20, // Aligns the button to the top
             right: 20, // Aligns the button to the right
@@ -279,7 +220,56 @@ class _HomePageState extends State<HomePage> {
               child: Text('History'),
             ),
           ),
-
+          // Start/Stop Tracking Button
+          Positioned(
+            bottom: 20,
+            right: 150,
+            child: ElevatedButton(
+              onPressed: () async {
+                if (_isTracking) {
+                  setState(() {
+                    _isTracking = false;
+                    if (_routeCoordinates.isNotEmpty) {
+                      LatLng stopLatLng = _routeCoordinates.last;
+                      _addStopMarker(stopLatLng, _polylineCounter);
+                      routeHistory.add({
+                        'coordinates': List<LatLng>.from(_routeCoordinates),
+                      });
+                      _routeCoordinates = [];
+                    }
+                  });
+                  showToast("Tracking is stopped");
+                } else {
+                  showToast("Tracking has started");
+                  setState(() {
+                    _isTracking = true;
+                    _polylineCounter++;
+                    _routeCoordinates = [];
+                  });
+                  _currentLocation = await _location?.getLocation();
+                  if (_currentLocation != null) {
+                    LatLng startLatLng = LatLng(
+                      _currentLocation!.latitude!,
+                      _currentLocation!.longitude!,
+                    );
+                    _routeCoordinates.add(startLatLng);
+                    _addStartMarker(startLatLng, _polylineCounter);
+                    moveToPosition(startLatLng);
+                    _createPolylines();
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isTracking ? Colors.red : Colors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
+              child: Text(_isTracking ? 'Stop' : 'Start'),
+            ),
+          ),
         ],
       ),
     );

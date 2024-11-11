@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_tracker/pages/view_history.dart';
@@ -22,13 +21,11 @@ class HistoryPage extends StatelessWidget {
 
   double _getDistanceBetweenPoints(LatLng start, LatLng end) {
     const double earthRadiusKm = 6371.0;
-    final double dLat =
-        (end.latitude - start.latitude) * (3.141592653589793 / 180.0);
-    final double dLon =
-        (end.longitude - start.longitude) * (3.141592653589793 / 180.0);
+    final double dLat = (end.latitude - start.latitude) * (pi / 180.0);
+    final double dLon = (end.longitude - start.longitude) * (pi / 180.0);
     final double a = (sin(dLat / 2) * sin(dLat / 2)) +
-        cos(start.latitude * (3.141592653589793 / 180.0)) *
-            cos(end.latitude * (3.141592653589793 / 180.0)) *
+        cos(start.latitude * (pi / 180.0)) *
+            cos(end.latitude * (pi / 180.0)) *
             sin(dLon / 2) *
             sin(dLon / 2);
     final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
@@ -49,8 +46,12 @@ class HistoryPage extends StatelessWidget {
             title: Text('Route ${index + 1}'),
             subtitle: Text('Distance: ${distanceKm.toStringAsFixed(2)} km'),
             onTap: () {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => ViewHistory()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ViewHistory(routeCoordinates: routeCoordinates),
+                ),
+              );
             },
           );
         },
