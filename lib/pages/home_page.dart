@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:location/location.dart';
-import 'history_page.dart'; // Import your existing HistoryPage
+import 'history_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,11 +25,54 @@ class _HomePageState extends State<HomePage> {
   Set<Marker> _markers = {};
   bool _isTracking = false;
   int _polylineCounter = 0;
+  late Box routeHistoryBox;
+
+  // Added for map type selection
+  MapType _currentMapType = MapType.normal;
 
   @override
   void initState() {
     init();
+    _setupConnectivityListener();
     super.initState();
+  }
+
+  void _setupConnectivityListener() {
+    Connectivity()
+        .onConnectivityChanged
+        .listen((List<ConnectivityResult> results) {
+      if (results.contains(ConnectivityResult.mobile) ||
+          results.contains(ConnectivityResult.wifi)) {
+        _syncDataToApi();
+      }
+    });
+  }
+
+  Future<void> _syncDataToApi() async {
+    if (routeHistoryBox.isNotEmpty) {
+      List<Map<String, dynamic>> historyData =
+          routeHistoryBox.values.cast<Map<String, dynamic>>().toList();
+      print("Syncing ${historyData.length} routes to API...");
+      await Future.delayed(Duration(seconds: 2)); // Simulate API call
+      print("Data synced successfully!");
+      await routeHistoryBox.clear(); // Clear after syncing
+    }
+  }
+
+  /// Save route to Hive
+  void _saveRouteToHistory() {
+    if (_routeCoordinates.isNotEmpty) {
+      routeHistoryBox.add({
+        'coordinates': _routeCoordinates
+            .map((latLng) => {
+                  'lat': latLng.latitude,
+                  'lng': latLng.longitude,
+                })
+            .toList(),
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+    }
+    print("Route saved with ${_routeCoordinates.length} points.");
   }
 
   init() async {
@@ -39,7 +84,7 @@ class _HomePageState extends State<HomePage> {
     _initLocation();
   }
 
-  _initLocation() async {
+  Future<void> _initLocation() async {
     _currentLocation = await _location?.getLocation();
     if (_currentLocation != null) {
       LatLng currentLatLng = LatLng(
@@ -119,6 +164,12 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _changeMapType(MapType mapType) {
+    setState(() {
+      _currentMapType = mapType;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,8 +178,34 @@ class _HomePageState extends State<HomePage> {
             'Route Tracker',
             style: TextStyle(color: Colors.white),
           ),
-          backgroundColor: Colors.black,
+          backgroundColor: Colors.lightBlueAccent,
           centerTitle: true,
+          actions: [
+            PopupMenuButton<MapType>(
+              icon: Icon(Icons.map, color: Colors.white),
+              onSelected: (MapType mapType) {
+                _changeMapType(mapType);
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: MapType.normal,
+                  child: Text('Normal'),
+                ),
+                PopupMenuItem(
+                  value: MapType.satellite,
+                  child: Text('Satellite'),
+                ),
+                PopupMenuItem(
+                  value: MapType.terrain,
+                  child: Text('Terrain'),
+                ),
+                PopupMenuItem(
+                  value: MapType.hybrid,
+                  child: Text('Hybrid'),
+                ),
+              ],
+            ),
+          ],
         ),
         body: _buildBody());
   }
@@ -143,7 +220,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           GoogleMap(
             initialCameraPosition: _cameraPosition!,
-            mapType: MapType.normal,
+            mapType: _currentMapType,
             polylines: _polylines,
             markers: _markers,
             myLocationEnabled: true,
@@ -235,6 +312,9 @@ class _HomePageState extends State<HomePage> {
                       routeHistory.add({
                         'coordinates': List<LatLng>.from(_routeCoordinates),
                       });
+                      print("Route Co-ordinates {$routeHistory}");
+                      _saveRouteToHistory();
+                      print("Route History Saved for offline mode.");
                       _routeCoordinates = [];
                     }
                   });

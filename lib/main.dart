@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_tracker/pages/home_page.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp(homeScreen: HomePage(),));
+  await Hive.initFlutter();
+  await Hive.openBox('routeHistoryBox');
+  runApp(const MyApp(
+    homeScreen: HomePage(),
+  ));
 }
 
 class MyApp extends StatefulWidget {
-
   final Widget homeScreen;
 
   const MyApp({Key? key, required this.homeScreen}) : super(key: key);
@@ -17,7 +21,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -25,6 +28,4 @@ class _MyAppState extends State<MyApp> {
       home: this.widget.homeScreen,
     );
   }
-
 }
-
