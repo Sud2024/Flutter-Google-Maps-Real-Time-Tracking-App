@@ -32,7 +32,8 @@ class _HomePageState extends State<HomePage> {
   // Added for map type selection
   MapType _currentMapType = MapType.normal;
 
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
@@ -48,11 +49,14 @@ class _HomePageState extends State<HomePage> {
     // Check if notifications permission is needed (for Android 13 and above)
     final bool? isPermissionGranted = await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>()
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.areNotificationsEnabled();
 
     if (isPermissionGranted == false) {
-      final bool? result = await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+      final bool? result = await flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
 
       if (result == true) {
         print("Notification permission granted");
@@ -92,10 +96,10 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _initializeNotifications() async {
     const AndroidInitializationSettings androidInitializationSettings =
-    AndroidInitializationSettings('@mipmap/applogo');
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const InitializationSettings initializationSettings =
-    InitializationSettings(android: androidInitializationSettings);
+        InitializationSettings(android: androidInitializationSettings);
 
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
@@ -103,7 +107,7 @@ class _HomePageState extends State<HomePage> {
   /// Step 4: Show Notification Function
   Future<void> _showTrackingNotification() async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
-    AndroidNotificationDetails(
+        AndroidNotificationDetails(
       'tracking_channel_id',
       'Tracking Notifications',
       channelDescription: 'Notifications for background location tracking',
@@ -115,7 +119,7 @@ class _HomePageState extends State<HomePage> {
     );
 
     const NotificationDetails platformChannelSpecifics =
-    NotificationDetails(android: androidPlatformChannelSpecifics);
+        NotificationDetails(android: androidPlatformChannelSpecifics);
 
     await flutterLocalNotificationsPlugin.show(
       0, // Notification ID
