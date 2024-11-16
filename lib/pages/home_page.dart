@@ -7,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:location/location.dart';
 import 'history_page.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -31,11 +32,97 @@ class _HomePageState extends State<HomePage> {
   // Added for map type selection
   MapType _currentMapType = MapType.normal;
 
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
   @override
   void initState() {
     init();
     _setupConnectivityListener();
+    _initializeNotifications();
+    _requestNotificationPermission();
+    _showTrackingNotification();
     super.initState();
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    // Check if notifications permission is needed (for Android 13 and above)
+    final bool? isPermissionGranted = await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>()
+        ?.areNotificationsEnabled();
+
+    if (isPermissionGranted == false) {
+      final bool? result = await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+
+      if (result == true) {
+        print("Notification permission granted");
+      } else {
+        _showPermissionDialog();
+      }
+    } else {
+      print("Notification permission already granted");
+    }
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Notification Permission Required'),
+          content: const Text(
+              'Please enable notification permissions in settings to receive alerts.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Navigator.of(context).pop();
+                // await openAppSettings();
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings androidInitializationSettings =
+    AndroidInitializationSettings('@mipmap/applogo');
+
+    const InitializationSettings initializationSettings =
+    InitializationSettings(android: androidInitializationSettings);
+
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  /// Step 4: Show Notification Function
+  Future<void> _showTrackingNotification() async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+    AndroidNotificationDetails(
+      'tracking_channel_id',
+      'Tracking Notifications',
+      channelDescription: 'Notifications for background location tracking',
+      importance: Importance.high,
+      priority: Priority.high,
+      visibility: NotificationVisibility.public,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+    NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+      0, // Notification ID
+      'Pletox',
+      'App is tracking your location in the background.',
+      platformChannelSpecifics,
+    );
   }
 
   void _setupConnectivityListener() {
@@ -160,6 +247,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _addStartMarker(LatLng position, int routeIndex) {
+    print("Adding Start Marker at $position for route $routeIndex");
     setState(() {
       _markers.add(
         Marker(
@@ -174,6 +262,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _addStopMarker(LatLng position, int routeIndex) {
+    print("Adding Stop Marker at $position for route $routeIndex");
     setState(() {
       _markers.add(
         Marker(
@@ -254,6 +343,7 @@ class _HomePageState extends State<HomePage> {
         _createPolylines();
       }
     }
+    setState(() {});
   }
 
   @override
