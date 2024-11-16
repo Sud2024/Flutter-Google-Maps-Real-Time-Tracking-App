@@ -224,16 +224,30 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _startBackgroundTracking() async {
-    final backgroundPermission = await FlutterBackground.hasPermissions;
-    if (!backgroundPermission) {
-      await FlutterBackground.initialize();
+    final isInitialized = await FlutterBackground.initialize(
+      androidConfig: FlutterBackgroundAndroidConfig(
+        notificationTitle: 'Background Tracking Active',
+        notificationText: 'Your location is being tracked in the background.',
+        notificationImportance: AndroidNotificationImportance.max,
+        notificationIcon: const AndroidResource(
+          name: 'ic_launcher',
+          defType: 'drawable',
+        ),
+      ),
+    );
+
+    if (isInitialized) {
+      await FlutterBackground.enableBackgroundExecution();
+      _location?.enableBackgroundMode(enable: true);
+    } else {
+      showToast('Failed to initialize FlutterBackground.');
     }
-    await FlutterBackground.enableBackgroundExecution();
-    _location?.enableBackgroundMode(enable: true);
   }
 
   Future<void> _stopBackgroundTracking() async {
-    await FlutterBackground.disableBackgroundExecution();
+    if (await FlutterBackground.isBackgroundExecutionEnabled) {
+      await FlutterBackground.disableBackgroundExecution();
+    }
     _location?.enableBackgroundMode(enable: false);
   }
 
@@ -309,7 +323,7 @@ class _HomePageState extends State<HomePage> {
         _isTracking = false;
       });
       await _stopBackgroundTracking();
-      showToast("Tracking is stopped");
+      showToast("Tracking stopped");
 
       if (_routeCoordinates.isNotEmpty) {
         LatLng stopLatLng = _routeCoordinates.last;
@@ -327,7 +341,7 @@ class _HomePageState extends State<HomePage> {
       }
     } else {
       // Starting the tracking
-      showToast("Tracking has started");
+      showToast("Tracking started");
       setState(() {
         _isTracking = true;
         _polylineCounter++;
