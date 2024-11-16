@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_background/flutter_background.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -81,7 +82,31 @@ class _HomePageState extends State<HomePage> {
       target: LatLng(0, 0),
       zoom: 15,
     );
-    _initLocation();
+
+    // Check for permission and initialize location services
+    bool _serviceEnabled;
+    PermissionStatus _permissionGranted;
+
+    // Check if the location service is enabled
+    _serviceEnabled = await _location!.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await _location!.requestService();
+      if (!_serviceEnabled) {
+        showToast("Location service not enabled");
+        return;
+      }
+    }
+
+    // Check if permission is granted
+    _permissionGranted = await _location!.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await _location!.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+        showToast("Location permission denied");
+        return;
+      }
+    }
+    await _initLocation();
   }
 
   Future<void> _initLocation() async {
@@ -105,6 +130,20 @@ class _HomePageState extends State<HomePage> {
         _createPolylines();
       }
     });
+  }
+
+  Future<void> _startBackgroundTracking() async {
+    final backgroundPermission = await FlutterBackground.hasPermissions;
+    if (!backgroundPermission) {
+      await FlutterBackground.initialize();
+    }
+    await FlutterBackground.enableBackgroundExecution();
+    _location?.enableBackgroundMode(enable: true);
+  }
+
+  Future<void> _stopBackgroundTracking() async {
+    await FlutterBackground.disableBackgroundExecution();
+    _location?.enableBackgroundMode(enable: false);
   }
 
   void _createPolylines() {
@@ -168,6 +207,53 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _currentMapType = mapType;
     });
+  }
+
+  void _toggleTracking() async {
+    if (_isTracking) {
+      // Stopping the tracking
+      setState(() {
+        _isTracking = false;
+      });
+      await _stopBackgroundTracking();
+      showToast("Tracking is stopped");
+
+      if (_routeCoordinates.isNotEmpty) {
+        LatLng stopLatLng = _routeCoordinates.last;
+        _addStopMarker(stopLatLng, _polylineCounter);
+
+        // Save the route to history
+        routeHistory.add({
+          'coordinates': List<LatLng>.from(_routeCoordinates),
+        });
+        print("Route Coordinates: $routeHistory");
+        _saveRouteToHistory();
+
+        // Clear the route coordinates for the next session
+        _routeCoordinates = [];
+      }
+    } else {
+      // Starting the tracking
+      showToast("Tracking has started");
+      setState(() {
+        _isTracking = true;
+        _polylineCounter++;
+        _routeCoordinates = [];
+      });
+      await _startBackgroundTracking();
+      // Get the current location for the start marker
+      _currentLocation = await _location?.getLocation();
+      if (_currentLocation != null) {
+        LatLng startLatLng = LatLng(
+          _currentLocation!.latitude!,
+          _currentLocation!.longitude!,
+        );
+        _routeCoordinates.add(startLatLng);
+        _addStartMarker(startLatLng, _polylineCounter);
+        moveToPosition(startLatLng);
+        _createPolylines();
+      }
+    }
   }
 
   @override
@@ -302,43 +388,7 @@ class _HomePageState extends State<HomePage> {
             bottom: 20,
             right: 150,
             child: ElevatedButton(
-              onPressed: () async {
-                if (_isTracking) {
-                  setState(() {
-                    _isTracking = false;
-                    if (_routeCoordinates.isNotEmpty) {
-                      LatLng stopLatLng = _routeCoordinates.last;
-                      _addStopMarker(stopLatLng, _polylineCounter);
-                      routeHistory.add({
-                        'coordinates': List<LatLng>.from(_routeCoordinates),
-                      });
-                      print("Route Co-ordinates {$routeHistory}");
-                      _saveRouteToHistory();
-                      print("Route History Saved for offline mode.");
-                      _routeCoordinates = [];
-                    }
-                  });
-                  showToast("Tracking is stopped");
-                } else {
-                  showToast("Tracking has started");
-                  setState(() {
-                    _isTracking = true;
-                    _polylineCounter++;
-                    _routeCoordinates = [];
-                  });
-                  _currentLocation = await _location?.getLocation();
-                  if (_currentLocation != null) {
-                    LatLng startLatLng = LatLng(
-                      _currentLocation!.latitude!,
-                      _currentLocation!.longitude!,
-                    );
-                    _routeCoordinates.add(startLatLng);
-                    _addStartMarker(startLatLng, _polylineCounter);
-                    moveToPosition(startLatLng);
-                    _createPolylines();
-                  }
-                }
-              },
+              onPressed: _toggleTracking,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _isTracking ? Colors.red : Colors.green,
                 foregroundColor: Colors.white,
@@ -349,7 +399,7 @@ class _HomePageState extends State<HomePage> {
               ),
               child: Text(_isTracking ? 'Stop' : 'Start'),
             ),
-          ),
+          )
         ],
       ),
     );
