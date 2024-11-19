@@ -77,12 +77,14 @@ class _ViewHistoryState extends State<ViewHistory> {
               markerId: MarkerId("start"),
               position: widget.routeCoordinates.first,
               infoWindow: InfoWindow(title: "Start"),
+              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
             ),
           if (widget.routeCoordinates.length > 1)
             Marker(
               markerId: MarkerId("end"),
               position: widget.routeCoordinates.last,
               infoWindow: InfoWindow(title: "End"),
+              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
             ),
         },
       ),

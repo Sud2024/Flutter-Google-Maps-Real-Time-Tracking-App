@@ -124,7 +124,7 @@ class _HomePageState extends State<HomePage> {
     await flutterLocalNotificationsPlugin.show(
       0, // Notification ID
       'Pletox',
-      'App is tracking your location in the background.',
+      'App is tracking your location',
       platformChannelSpecifics,
     );
   }
@@ -224,31 +224,22 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _startBackgroundTracking() async {
-    final isInitialized = await FlutterBackground.initialize(
-      androidConfig: FlutterBackgroundAndroidConfig(
-        notificationTitle: 'Background Tracking Active',
-        notificationText: 'Your location is being tracked in the background.',
-        notificationImportance: AndroidNotificationImportance.max,
-        notificationIcon: const AndroidResource(
-          name: 'ic_launcher',
-          defType: 'drawable',
-        ),
-      ),
-    );
-
-    if (isInitialized) {
-      await FlutterBackground.enableBackgroundExecution();
-      _location?.enableBackgroundMode(enable: true);
-    } else {
-      showToast('Failed to initialize FlutterBackground.');
+    final backgroundPermission = await FlutterBackground.hasPermissions;
+    if (!backgroundPermission) {
+      await FlutterBackground.initialize();
     }
+    await FlutterBackground.enableBackgroundExecution();
+    _location?.enableBackgroundMode(enable: true);
+    print("Background tracking is allowed and started.");
+    // _showTrackingNotification();
   }
 
   Future<void> _stopBackgroundTracking() async {
     if (await FlutterBackground.isBackgroundExecutionEnabled) {
       await FlutterBackground.disableBackgroundExecution();
     }
-    _location?.enableBackgroundMode(enable: false);
+    _location?.enableBackgroundMode(enable: true);
+    print("Background tracking is stopped.");
   }
 
   void _createPolylines() {
@@ -351,12 +342,10 @@ class _HomePageState extends State<HomePage> {
       // Get the current location for the start marker
       _currentLocation = await _location?.getLocation();
       if (_currentLocation != null) {
-        LatLng startLatLng = LatLng(
-          _currentLocation!.latitude!,
-          _currentLocation!.longitude!,
-        );
-        _routeCoordinates.add(startLatLng);
+        LatLng startLatLng = LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!,);
         _addStartMarker(startLatLng, _polylineCounter);
+        _routeCoordinates.add(startLatLng);
+        print("Start Marker added {$_addStartMarker}");
         moveToPosition(startLatLng);
         _createPolylines();
       }
