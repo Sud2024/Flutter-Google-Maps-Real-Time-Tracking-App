@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_tracker/pages/view_history.dart';
+import 'package:geocoding/geocoding.dart';
 
 class HistoryPage extends StatelessWidget {
   final List<Map<String, dynamic>> routeHistory;
@@ -41,6 +42,22 @@ class HistoryPage extends StatelessWidget {
     return totalDistance;
   }
 
+  Future<String> _getPlaceName(LatLng position) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      if (placemarks.isNotEmpty) {
+        Placemark placemark = placemarks.first;
+        return '${placemark.name}, ${placemark.locality}';
+      }
+    } catch (e) {
+      print('Error fetching place name: $e');
+    }
+    return 'Unknown Location';
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalDistanceKm = _calculateTotalDistance();
@@ -53,16 +70,42 @@ class HistoryPage extends StatelessWidget {
               itemCount: routeHistory.length,
               itemBuilder: (context, index) {
                 final routeData = routeHistory[index];
-                final routeCoordinates = routeData['coordinates'] as List<LatLng>;
+                final routeCoordinates =
+                    routeData['coordinates'] as List<LatLng>;
                 final distanceKm = _calculateDistance(routeCoordinates);
                 return ListTile(
                   title: Text('Route ${index + 1}'),
-                  subtitle: Text('Distance: ${distanceKm.toStringAsFixed(2)} km'),
+                  subtitle: FutureBuilder(
+                    future: Future.wait([
+                      _getPlaceName(routeCoordinates.first),
+                      _getPlaceName(routeCoordinates.last),
+                    ]),
+                    builder: (context, AsyncSnapshot<List<String>> snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Text('Fetching locations...');
+                      } else if (snapshot.hasError || !snapshot.hasData) {
+                        return Text('Unable to fetch locations');
+                      } else {
+                        final startName = snapshot.data![0];
+                        final endName = snapshot.data![1];
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Start Position: $startName'),
+                            Text('End Position: $endName'),
+                            Text(
+                                'Distance: ${distanceKm.toStringAsFixed(2)} km'),
+                          ],
+                        );
+                      }
+                    },
+                  ),
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ViewHistory(routeCoordinates: routeCoordinates),
+                        builder: (context) =>
+                            ViewHistory(routeCoordinates: routeCoordinates),
                       ),
                     );
                   },
