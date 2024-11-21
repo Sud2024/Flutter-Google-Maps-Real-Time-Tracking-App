@@ -32,29 +32,58 @@ class HistoryPage extends StatelessWidget {
     return earthRadiusKm * c;
   }
 
+  double _calculateTotalDistance() {
+    double totalDistance = 0.0;
+    for (var routeData in routeHistory) {
+      final routeCoordinates = routeData['coordinates'] as List<LatLng>;
+      totalDistance += _calculateDistance(routeCoordinates);
+    }
+    return totalDistance;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final totalDistanceKm = _calculateTotalDistance();
     return Scaffold(
       appBar: AppBar(title: Text('Route History')),
-      body: ListView.builder(
-        itemCount: routeHistory.length,
-        itemBuilder: (context, index) {
-          final routeData = routeHistory[index];
-          final routeCoordinates = routeData['coordinates'] as List<LatLng>;
-          final distanceKm = _calculateDistance(routeCoordinates);
-          return ListTile(
-            title: Text('Route ${index + 1}'),
-            subtitle: Text('Distance: ${distanceKm.toStringAsFixed(2)} km'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ViewHistory(routeCoordinates: routeCoordinates),
-                ),
-              );
-            },
-          );
-        },
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: routeHistory.length,
+              itemBuilder: (context, index) {
+                final routeData = routeHistory[index];
+                final routeCoordinates = routeData['coordinates'] as List<LatLng>;
+                final distanceKm = _calculateDistance(routeCoordinates);
+                return ListTile(
+                  title: Text('Route ${index + 1}'),
+                  subtitle: Text('Distance: ${distanceKm.toStringAsFixed(2)} km'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ViewHistory(routeCoordinates: routeCoordinates),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          Container(
+            color: Colors.blueAccent,
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              'Total Distance Travelled: ${totalDistanceKm.toStringAsFixed(2)} kilometers',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
       ),
     );
   }
