@@ -47,7 +47,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _requestNotificationPermission() async {
-
     final bool? isPermissionGranted = await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
@@ -310,7 +309,6 @@ class _HomePageState extends State<HomePage> {
 
   void _toggleTracking() async {
     if (_isTracking) {
-
       setState(() {
         _isTracking = false;
       });
@@ -321,7 +319,6 @@ class _HomePageState extends State<HomePage> {
         LatLng stopLatLng = _routeCoordinates.last;
         _addStopMarker(stopLatLng, _polylineCounter);
 
-
         routeHistory.add({
           'coordinates': List<LatLng>.from(_routeCoordinates),
         });
@@ -331,14 +328,12 @@ class _HomePageState extends State<HomePage> {
         _routeCoordinates = [];
       }
     } else {
-
       showToast("Tracking started");
       setState(() {
         _isTracking = true;
         _polylineCounter++;
         _routeCoordinates = [];
       });
-
 
       _currentLocation = await _location?.getLocation();
       if (_currentLocation != null) {

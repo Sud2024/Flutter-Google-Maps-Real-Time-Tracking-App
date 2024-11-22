@@ -12,7 +12,6 @@ class ViewHistory extends StatefulWidget {
 }
 
 class _ViewHistoryState extends State<ViewHistory> {
-
   MapType _currentMapType = MapType.normal;
 
   void _changeMapType(MapType mapType) {
@@ -25,7 +24,10 @@ class _ViewHistoryState extends State<ViewHistory> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('View Route', style: TextStyle(color: Colors.white),),
+        title: Text(
+          'View Route',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.teal,
         centerTitle: true,
         actions: [
@@ -77,14 +79,16 @@ class _ViewHistoryState extends State<ViewHistory> {
               markerId: MarkerId("start"),
               position: widget.routeCoordinates.first,
               infoWindow: InfoWindow(title: "Start"),
-              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueGreen),
             ),
           if (widget.routeCoordinates.length > 1)
             Marker(
               markerId: MarkerId("end"),
               position: widget.routeCoordinates.last,
               infoWindow: InfoWindow(title: "End"),
-              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueRed),
             ),
         },
       ),

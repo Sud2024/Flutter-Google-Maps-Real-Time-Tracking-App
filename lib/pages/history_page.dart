@@ -1,13 +1,21 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_tracker/pages/view_history.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:flutter/services.dart'; // Required for Clipboard functionality
 
-class HistoryPage extends StatelessWidget {
+class HistoryPage extends StatefulWidget {
   final List<Map<String, dynamic>> routeHistory;
 
   const HistoryPage(this.routeHistory, {Key? key}) : super(key: key);
+
+  @override
+  State<HistoryPage> createState() => _HistoryPageState();
+}
+
+class _HistoryPageState extends State<HistoryPage> {
 
   double _calculateDistance(List<LatLng> routeCoordinates) {
     double totalDistance = 0.0;
@@ -35,7 +43,7 @@ class HistoryPage extends StatelessWidget {
 
   double _calculateTotalDistance() {
     double totalDistance = 0.0;
-    for (var routeData in routeHistory) {
+    for (var routeData in widget.routeHistory) {
       final routeCoordinates = routeData['coordinates'] as List<LatLng>;
       totalDistance += _calculateDistance(routeCoordinates);
     }
@@ -58,6 +66,17 @@ class HistoryPage extends StatelessWidget {
     return 'Unknown Location';
   }
 
+  void showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: Colors.black,
+      textColor: Colors.white,
+      fontSize: 20.0,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalDistanceKm = _calculateTotalDistance();
@@ -67,12 +86,13 @@ class HistoryPage extends StatelessWidget {
         children: [
           Expanded(
             child: ListView.builder(
-              itemCount: routeHistory.length,
+              itemCount: widget.routeHistory.length,
               itemBuilder: (context, index) {
-                final routeData = routeHistory[index];
+                final routeData = widget.routeHistory[index];
                 final routeCoordinates =
-                    routeData['coordinates'] as List<LatLng>;
+                routeData['coordinates'] as List<LatLng>;
                 final distanceKm = _calculateDistance(routeCoordinates);
+
                 return ListTile(
                   title: Text('Route ${index + 1}'),
                   subtitle: FutureBuilder(
@@ -88,13 +108,57 @@ class HistoryPage extends StatelessWidget {
                       } else {
                         final startName = snapshot.data![0];
                         final endName = snapshot.data![1];
+
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Start Position: $startName'),
                             Text('End Position: $endName'),
                             Text(
-                                'Distance: ${distanceKm.toStringAsFixed(2)} km'),
+                              'Distance: ${distanceKm.toStringAsFixed(2)} km',
+                            ),
+                            SizedBox(height: 8),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 10.0, right: 10.0),
+                              child: DropdownButton<String>(
+                                isExpanded: true,
+                                hint: Text('View Coordinates'),
+                                items: [
+                                  ...routeCoordinates.take(5).map(
+                                        (coord) => DropdownMenuItem<String>(
+                                      value:
+                                      '(${coord.latitude.toStringAsFixed(5)}, ${coord.longitude.toStringAsFixed(5)})',
+                                      child: Text(
+                                        '(${coord.latitude.toStringAsFixed(5)}, ${coord.longitude.toStringAsFixed(5)})',
+                                      ),
+                                    ),
+                                  ),
+                                  if (routeCoordinates.length > 5)
+                                    DropdownMenuItem<String>(
+                                      value: '...',
+                                      child: Text('...'),
+                                    ),
+                                  DropdownMenuItem<String>(
+                                    value: 'copy',
+                                    child: Text('Copy All Coordinates'),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  if (value == 'copy') {
+                                    // Copy all coordinates to clipboard
+                                    String coordinatesString = routeCoordinates
+                                        .map((e) =>
+                                    '(${e.latitude.toStringAsFixed(5)}, ${e.longitude.toStringAsFixed(5)})')
+                                        .join(', ');
+                                    Clipboard.setData(
+                                        ClipboardData(text: coordinatesString));
+                                    showToast("All Co-ordinates are copied");
+                                  } else {
+                                    print('Selected: $value');
+                                  }
+                                },
+                              ),
+                            ),
                           ],
                         );
                       }
