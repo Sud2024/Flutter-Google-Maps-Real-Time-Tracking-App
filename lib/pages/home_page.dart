@@ -171,7 +171,7 @@ class _HomePageState extends State<HomePage> {
     _location = Location();
     _cameraPosition = CameraPosition(
       target: LatLng(0, 0),
-      zoom: 15,
+      zoom: 18,
     );
 
     // Check for permission and initialize location services
@@ -287,7 +287,7 @@ class _HomePageState extends State<HomePage> {
   moveToPosition(LatLng latLng) async {
     GoogleMapController mapController = await _googleMapController.future;
     mapController.animateCamera(CameraUpdate.newCameraPosition(
-        CameraPosition(target: latLng, zoom: 15)));
+        CameraPosition(target: latLng, zoom: 18)));
   }
 
   void showToast(String message) {
